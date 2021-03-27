@@ -2,16 +2,10 @@
 #include<unistd.h>
 #include "cthread.h"
 
-#define SIZESTACK (1024 * 1024)
-
 typedef struct nums {
     int a;
     int b;
 }nums;
-
-void handle_usr1(int sig) {
-    fflush(stdout);
-}
 
 void *add(void *args) {
     nums *num = (nums *)args;
@@ -25,21 +19,30 @@ void *add(void *args) {
     return res;
 }
 
-int main() {
-    struct sigaction sa;
-    sa.sa_handler = &handle_usr1;
-    sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-    sigaction(SIGUSR1, &sa, NULL);
+void *loop(void *args) {
+    int i = 5;
+    while(i > 0) {
+        printf("...printing\n");
+        sleep(1);
+        i--;
+    }
+    return NULL;
+}
 
-    cthread c1;
+int main() {
+
+    cthread_init();
+    cthread c1, c2;
     int *result;
     nums num1;
     num1.a = 4;
     num1.b = 4;
     int pid1 = cthread_create(&c1, add, &num1);
+    int pid2 = cthread_create(&c2, loop, NULL);
 
     cthread_join(&c1, (void *) &result);
+    cthread_join(&c2, NULL);    
+
     printf("Result is %d\n", *result);
     return 0;
 }

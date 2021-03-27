@@ -8,6 +8,7 @@
 
 typedef struct cthread {
     int tid; //thread id
+    int execution; // 1 if the execution of thread completes, 0 if still executing
     int ptid; //pid of the calling process
     void *stack_start; //address of the start of the stack
     int stack_size;
@@ -17,6 +18,7 @@ typedef struct cthread {
     sigjmp_buf env; //Saves current PC and SP when sigsetjmp is called
 }cthread;
 
+void cthread_init();
 int cthread_run(void *);
 int cthread_create(cthread *, void *(*f)(void *), void *);
 int cthread_join(cthread *, void **);

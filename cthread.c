@@ -7,24 +7,37 @@
 #include <setjmp.h>
 #include <sys/wait.h>
 #include<signal.h>
-// #include <sys/mman.h>
-// #include <linux/signal.h>
-// #include <linux/unistd.h>
-// #include <linux/types.h>
-// #include <values.h>
+#include <linux/futex.h>
+#include <syscall.h>
 #include "cthread.h"
 
 #define SIZESTACK (1024 * 1024)
 
+void handle_usr1(int sig) {
+    fflush(stdout);
+}
+
+// Installs signal handler for SIGUSR1 which is used to receive termination signal
+void cthread_init() {
+    struct sigaction sa;
+    sa.sa_handler = &handle_usr1;
+    sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
+    sigaction(SIGUSR1, &sa, NULL);
+}
+
+// Runs the function passed to the thread
 int cthread_run(void *c) {
     cthread *c1 = (cthread *)c;
     if(sigsetjmp(c1->env, 0) == 0) {
         c1->result = c1->func(c1->args);
     }
     kill(c1->ptid, SIGUSR1);
+    c1->execution = 1;
     return 0;
 }
 
+//Creates a thread for the passed function
 int cthread_create(cthread *c, void *(*f)(void *), void *args) {
     char *stack, *stackhead;
     stack = (char *)malloc(SIZESTACK);
@@ -36,6 +49,7 @@ int cthread_create(cthread *c, void *(*f)(void *), void *args) {
 
     stackhead = stack + SIZESTACK - 1;
 
+    c->execution = 0;
     c->stack_start = stackhead;
     c->args = args;
     c->func = f;
@@ -56,11 +70,14 @@ int cthread_create(cthread *c, void *(*f)(void *), void *args) {
     return c->tid;
 }
 
+//Waits for the thread to complete its execution
 int cthread_join(cthread *c, void **result) {
-    int status;
-    printf("Waiting\n");
-    pause();
+    while(c->execution == 0)
+        pause();
+
     if(result != NULL)
         *result = c->result;
+
+    free((void *)(c->stack_start + 1 - SIZESTACK));
     return 0;
 }
