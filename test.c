@@ -29,10 +29,15 @@ void *loop(void *args) {
     return NULL;
 }
 
-int main() {
+void *dummy(void *args) {
+    // int pid = gettid();
+    // printf("Tid from function is %d\n", pid);
+    printf("Hi there\n");
+    return NULL;
+}
 
-    cthread_init();
-    cthread c1, c2;
+int main() {
+    cthread c1, c2, c3;
     int *result;
     nums num1;
     num1.a = 4;
@@ -40,9 +45,13 @@ int main() {
     int pid1 = cthread_create(&c1, add, &num1);
     int pid2 = cthread_create(&c2, loop, NULL);
 
-    cthread_join(&c1, (void *) &result);
-    cthread_join(&c2, NULL);    
+    cthread_join(&c1, (void *) &result, NULL);
+    cthread_join(&c2, NULL, NULL);    
 
     printf("Result is %d\n", *result);
+
+    int pid3 = cthread_create(&c3, dummy, NULL);
+    cthread_join(&c3, NULL, NULL);
+
     return 0;
 }

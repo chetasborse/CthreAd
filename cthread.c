@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <setjmp.h>
 #include <sys/wait.h>
@@ -13,17 +14,9 @@
 
 #define SIZESTACK (1024 * 1024)
 
-void handle_usr1(int sig) {
-    fflush(stdout);
-}
-
-// Installs signal handler for SIGUSR1 which is used to receive termination signal
-void cthread_init() {
-    struct sigaction sa;
-    sa.sa_handler = &handle_usr1;
-    sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-    sigaction(SIGUSR1, &sa, NULL);
+//System call to halt parent till the value in futex_val doesn't change to 0
+int futex_wait(void* addr, int tid, struct timespec *time){
+  return syscall(SYS_futex,addr,FUTEX_WAIT, tid, NULL, NULL, 0);
 }
 
 // Runs the function passed to the thread
@@ -32,7 +25,6 @@ int cthread_run(void *c) {
     if(sigsetjmp(c1->env, 0) == 0) {
         c1->result = c1->func(c1->args);
     }
-    kill(c1->ptid, SIGUSR1);
     c1->execution = 1;
     return 0;
 }
@@ -59,8 +51,8 @@ int cthread_create(cthread *c, void *(*f)(void *), void *args) {
     c->tid = clone(cthread_run, stackhead, CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SYSVSEM
                        | CLONE_SIGHAND | CLONE_THREAD
                        | CLONE_PARENT_SETTID
-                       | CLONE_CHILD_CLEARTID, c);
-    
+                       | CLONE_CHILD_CLEARTID, c, &c->futex_val, c, &c->futex_val);
+
     if(c->tid == -1) {
 		fprintf(stderr, "Unable to clone\n");
 		free(stack);
@@ -71,9 +63,9 @@ int cthread_create(cthread *c, void *(*f)(void *), void *args) {
 }
 
 //Waits for the thread to complete its execution
-int cthread_join(cthread *c, void **result) {
-    while(c->execution == 0)
-        pause();
+int cthread_join(cthread *c, void **result, struct timespec *time) {
+    
+    futex_wait(&c->futex_val, c->tid, time);
 
     if(result != NULL)
         *result = c->result;
