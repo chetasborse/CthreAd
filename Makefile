@@ -1,14 +1,14 @@
 CC = gcc
-default: test
+default: fibtest
 
-test: test.o cthread.o
-		$(CC) $(CFLAGS) -o test test.o cthread.o
+fibtest: fibtest.o cthread.o
+		$(CC) $(CFLAGS) -o fibtest fibtest.o cthread.o
 
-test.o: test.c
-		$(CC) $(CFLAGS) -c test.c
+fibtest.o: test.c
+		$(CC) $(CFLAGS) -c fibtest.c
 
 cthread.o: cthread.c
 		$(CC) $(CFLAGS) -c cthread.c
 
 clean:
-		$(RM) test *.o *~
+		$(RM) fibtest *.o *~

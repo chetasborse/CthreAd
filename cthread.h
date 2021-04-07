@@ -7,6 +7,13 @@
 #include <setjmp.h>
 #include <ucontext.h>
 
+// node in a queue
+typedef struct node
+{
+    struct cthread *thread;
+    struct node *next;
+} node;
+
 // queue structure for thread pool
 typedef struct thread_queue
 {
@@ -30,15 +37,9 @@ typedef struct cthread
     int state;                 // state of the thread
     ucontext_t context;        // context of thread
     thread_queue *child_queue; // points to child queue
+    struct cthread *parent;    //pointer to parent thread
 
 } cthread;
-
-// node in a queue
-typedef struct node
-{
-    cthread *thread;
-    struct node *next;
-} node;
 
 // states of any thread
 typedef enum state
@@ -47,7 +48,8 @@ typedef enum state
     RUNNING,
     SCHEDULED,
     WAITING,
-    TERMINATED
+    TERMINATED,
+    BLOCKED,
 } state;
 
 // structure for scheduler
@@ -70,8 +72,9 @@ typedef struct Semaphore
 
 void cthread_init();
 int cthread_run(void *);
-int cthread_create(cthread *, void *(*f)(void *), void *);
-int cthread_join(cthread *, void **);
+void cthread_yield(void);
+void *cthread_create(void (*func)(void *), void *args);
+int cthread_join(void *);
 
 void cthread_exit();
 
