@@ -15,7 +15,8 @@
 #define SIZESTACK (1024 * 1024)
 
 // Pushes a thread to the queue
-void enq(queue *q, cthread *d) {
+void enq(cthread *d) {
+    queue *q = threads_queue;
 	if(q->head == NULL) {
 		q->head = d;
 		q->tail = d;
@@ -28,7 +29,8 @@ void enq(queue *q, cthread *d) {
 }
 
 // Prints all the running threads
-void traverse(queue *q) {
+void traverse() {
+    queue *q = threads_queue;
     cthread *ptr;
     ptr = q->head;
     do {
@@ -38,18 +40,14 @@ void traverse(queue *q) {
     }while(ptr != q->head);
 }
 
-// Checks if the queue is full
-int qfull(queue *q) {
-	return 0;
-}
-
 // Checks if the queue is empty
-int qempty(queue *q) {
-	return (q->head == NULL);
+int qempty() {
+	return (threads_queue->head == NULL);
 }
 
 // Returns pointer to the thread struct with the given thread_id
-cthread *get_details(queue *q, int tid) {
+cthread *get_details(int tid) {
+    queue *q = threads_queue;
     cthread *ptr;
     ptr = q->head;
     do {
@@ -64,6 +62,11 @@ cthread *get_details(queue *q, int tid) {
 // System call to halt parent till the value in futex_val doesn't change to 0
 int futex_wait(void* addr, int tid, struct timespec *time){
   return syscall(SYS_futex,addr,FUTEX_WAIT, tid, NULL, NULL, 0);
+}
+
+// Wakes only one process waiting in futex
+int futex_wake(void* addr){
+  return syscall(SYS_futex,addr,FUTEX_WAKE, 1, NULL, NULL, 0);
 }
 
 // System call to send signal to the intended thread
@@ -81,7 +84,7 @@ void cthread_init() {
 // Runs the function passed to the thread
 int cthread_run(void *c) {
     cthread *c1 = (cthread *)c;
-    enq(threads_queue, c1);
+    enq(c1);
     if(setjmp(c1->env) == 0) {
         c1->result = c1->func(c1->args);
     }
@@ -121,6 +124,7 @@ int cthread_create(cthread *c, void *(*f)(void *), void *args) {
     if(c->tid == -1) {
 		fprintf(stderr, "Unable to clone\n");
 		free(stack);
+        printf("Unable to create thread\n");
 		exit(1);
 	}   
 
@@ -137,6 +141,7 @@ int cthread_join(cthread *c, void **result, struct timespec *time) {
 
     if(result != NULL)
         *result = c->result;
+    printf("here");
 
     free((void *)(c->stack_start + 1 - SIZESTACK));
     return 0;
@@ -147,7 +152,7 @@ cthread *cthread_get_self() {
     int tid = gettid();
     if(tid == getpid())
         return NULL;
-    cthread *c1 = get_details(threads_queue, tid);
+    cthread *c1 = get_details(tid);
     return c1;
 }
 
@@ -163,6 +168,59 @@ void cthread_exit(void *result) {
 // Sends signal to the intended thread
 int cthread_kill(cthread c1, int signal) {
     return thread_kill(c1.tid, signal);
+}
+
+// Checks if 2 threads are equal. Returns non-zero number if equal
+int cthread_equal(cthread c1, cthread c2) {
+    if(c1.tid == c2.tid)
+        return 1;
+    return 0;
+}
+
+// Initializes flag in mutex lock to 0
+void cthread_mutex_init(cthread_mutex *lock) {
+    lock->flag = 0;
+}
+
+// Locks the critical section in the thread using sleeplock
+int cthread_mutex_lock(cthread_mutex *cm) {
+    while(1) {
+        int flag_status = atomic_flag_test_and_set_explicit(&cm->flag, memory_order_relaxed);
+        if(flag_status == 0) {
+            break;
+        }
+        futex_wait(&cm->flag, 1, NULL);
+    }
+    return 1;
+}
+
+// Unlocks the critical section of the thread using sleeplock
+int cthread_mutex_unlock(cthread_mutex *cm) {
+    atomic_flag_clear_explicit(&cm->flag, memory_order_relaxed);
+    futex_wake(&cm->flag);
+    return 1;
+}
+
+// Initializes flag in spinlock to 0
+void cthread_spinlock_init(cthread_spinlock *lock) {
+    lock->flag = 0;
+}
+
+// Locks the critical section in the thread using spinlock
+int cthread_spinlock_lock(cthread_spinlock *sl) {
+    while(1) {
+        int flag_status = atomic_flag_test_and_set_explicit(&sl->flag, memory_order_relaxed);
+        if(flag_status == 0) {
+            break;
+        }
+    }
+    return 1;
+}
+
+// Unlocks the critical section of the thread using spinlock
+int cthread_spinlock_unlock(cthread_spinlock *sl) {
+    atomic_flag_clear_explicit(&sl->flag, memory_order_relaxed);
+    return 1;
 }
 
 
