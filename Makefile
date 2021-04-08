@@ -7,7 +7,7 @@ test: test.o cthread.o
 test.o: test.c
 		$(CC) $(CFLAGS) -c test.c
 
-cthread.o: cthread.c
+cthread.o: cthread.c cthread.h
 		$(CC) $(CFLAGS) -c cthread.c
 
 clean:
