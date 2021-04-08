@@ -38,6 +38,7 @@ typedef struct cthread
     ucontext_t context;        // context of thread
     thread_queue *child_queue; // points to child queue
     struct cthread *parent;    //pointer to parent thread
+    int blocked_on;            // tid of the blocking thread
 
 } cthread;
 
@@ -75,7 +76,7 @@ int cthread_run(void *);
 void cthread_yield(void);
 void *cthread_create(void (*func)(void *), void *args);
 int cthread_join(void *);
-
+void cthread_join_all(void);
 void cthread_exit();
 
 int cthread_get_self();

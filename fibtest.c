@@ -15,7 +15,7 @@ void fib(void *in)
 {
     int *n = (int *)in;
     //printf("\n In fib n=%d", *n);	 	/* cast input parameter to an int * */
-    printf("WW: %d ", *n);
+    printf("WW: %d \t", *n);
     if (*n == 0)
         /* pass */; /* return 0; it already is zero */
 
@@ -30,14 +30,16 @@ void fib(void *in)
         // create children; parameter points to int that is initialized.
         // this is the location they will write to as well.
         cthread *c1 = (cthread *)cthread_create(fib, (void *)&n1);
+
         cthread *c2 = (cthread *)cthread_create(fib, (void *)&n2);
         // after creating children, wait for them to finish
-        cthread_join((void *)c1);
-        cthread_join((void *)c2);
+        cthread_join_all();
         //  write to addr n_ptr points; return results in addr pointed to
         //  by input parameter
         *n = n1 + n2;
     }
+
+    cthread_exit();
 
     // MyThreadExit(); // always call this at end
 }
