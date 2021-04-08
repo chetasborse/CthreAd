@@ -1,326 +1,293 @@
 #include <ucontext.h>
 #include <stdio.h>
+#include <signal.h>
 #include <stdlib.h>
 #include "cthread.h"
 
-// you have ignored blocked on by parent thread
+// variables
+int thread_id = 1;
+thread_queue init_queue;
+thread_queue ready_queue;
 
-int thread_count = 1;
+cthread *main_thread;
+cthread *running_thread;
 
-thread_queue *q_init()
-{
-    thread_queue *q;
-    q = (thread_queue *)malloc(sizeof(thread_queue));
-    if (!q)
-    {
-        return NULL;
-    }
-
-    return q;
-}
+ucontext_t scheduler_context;
+ucontext_t init_context;
 
 int is_qempty(thread_queue *q)
 {
-    return !q->size;
+    return !q->value;
 }
-
-cthread *running_thread;
-cthread *main_thread;
-ucontext_t *main_context;
 
 void enqueue(thread_queue *q, cthread *thread)
 {
-    node *new = (node *)malloc(sizeof(node));
-    new->thread = thread;
-    new->next = NULL;
+    if (q->tail)
+    {
+        q->tail->next = thread;
+        thread->prev = q->tail;
+    }
+    else
+    {
+        q->head = thread;
+        thread->prev = NULL;
+    }
 
-    if (q->tail != NULL)
-        q->tail->next = new;
-
-    q->tail = new;
-
-    if (q->head == NULL)
-        q->head = q->tail;
+    q->tail = thread;
+    thread->next = NULL;
 }
 
 cthread *dequeue(thread_queue *q)
 {
-    if (q->head == NULL)
-        return NULL;
-
-    cthread *temp = q->head->thread;
-    if (q->head == q->tail)
-        q->head = q->tail = NULL;
-
+    cthread *t = NULL;
+    if (q->head)
+    {
+        t = q->head;
+        q->head = t->next;
+    }
+    if (t->next)
+    {
+        t->next->prev = NULL;
+        t->next = NULL;
+    }
     else
-        q->head = q->head->next;
-
-    return temp;
+    {
+        q->tail = NULL;
+    }
+    return t;
 }
 
-int exists_in_q(thread_queue *q, cthread *thread)
-{
-    if (is_qempty(q))
-        return 0;
+// int exists_in_q(thread_queue *q, cthread *thread)
+// {
+//     if (is_qempty(q))
+//         return 0;
 
-    node *temp = q->head;
-    while (temp)
-    {
-        if (temp->thread == thread)
-            return 1;
-        temp = temp->next;
-    }
+//     node *temp = q->head;
+//     while (temp)
+//     {
+//         if (temp->thread == thread)
+//             return 1;
+//         temp = temp->next;
+//     }
 
-    return 0;
-}
+//     return 0;
+// }
 
-void delete_thread(thread_queue *q, cthread *thread)
-{
-    if (is_qempty(q))
-    {
-        return;
-    }
-    node *temp = q->head;
-    node *previous;
+// void delete_thread(thread_queue *q, cthread *thread)
+// {
+//     if (is_qempty(q))
+//     {
+//         return;
+//     }
+//     node *temp = q->head;
+//     node *previous;
 
-    while (temp)
-    {
-        if (thread == temp->thread)
-        {
-            if ((temp == q->head) && (q->head == q->tail))
-            {
-                q->head = NULL;
-                q->tail = NULL;
-            }
-            else if (temp == q->head)
-            {
-                q->head = q->head->next;
-            }
-            else if (temp == q->tail)
-            {
-                q->tail = previous;
-                q->tail->next = NULL;
-            }
-            else
-            {
-                previous->next = temp->next;
-            }
-            return;
-        }
-        previous = temp;
-        temp = temp->next;
-    }
-    return;
-}
+//     while (temp)
+//     {
+//         if (thread == temp->thread)
+//         {
+//             if ((temp == q->head) && (q->head == q->tail))
+//             {
+//                 q->head = NULL;
+//                 q->tail = NULL;
+//             }
+//             else if (temp == q->head)
+//             {
+//                 q->head = q->head->next;
+//             }
+//             else if (temp == q->tail)
+//             {
+//                 q->tail = previous;
+//                 q->tail->next = NULL;
+//             }
+//             else
+//             {
+//                 previous->next = temp->next;
+//             }
+//             return;
+//         }
+//         previous = temp;
+//         temp = temp->next;
+//     }
+//     return;
+// }
 
-thread_queue *ready_queue;
-thread_queue *blocked_queue;
+// thread functions
 
 void cthread_init(void (*func)(void *), void *args)
 {
-    cthread *thread = (cthread *)malloc(sizeof(cthread));
-    thread->tid = thread_count;
-    thread_count++;
-
-    thread->state = READY;
-    thread->parent = NULL;
-    thread->child_queue = q_init();
-
-    ready_queue = q_init();
-    blocked_queue = q_init();
-
-    getcontext(&thread->context);
-    thread->context.uc_stack.ss_sp = malloc(1024 * 8);
-    thread->context.uc_stack.ss_size = 1024 * 8;
-    makecontext(&thread->context, (void (*)(void))func, 1, args);
-
-    running_thread = thread;
-    main_thread = thread;
-
-    main_context = (ucontext_t *)malloc(sizeof(ucontext_t));
-    swapcontext(main_context, &thread->context);
+    main_thread = setup_thread(func, args);
+    enqueue(&ready_queue, main_thread);
+    thread_scheduler();
 }
 
-void *cthread_create(void (*func)(void *), void *args)
+cthread *setup_thread(void (*func)(void *), void *args)
 {
-    cthread *thread = (cthread *)malloc(sizeof(cthread));
-    thread->tid = thread_count;
-    thread_count++;
+    cthread *t = calloc(1, sizeof(cthread));
+    if (!t)
+    {
+        perror("Malloc failed in setup_thread!\n");
+        exit(1);
+    }
 
-    thread->state = READY;
-    thread->parent = running_thread;
-    thread->child_queue = q_init();
+    if (getcontext(&t->context) == -1)
+    {
+        perror("getcontext failed\n");
+    }
+    t->context.uc_stack.ss_sp = calloc(1, SIGSTKSZ);
+    if (!t->context.uc_stack.ss_sp)
+    {
+        perror("Calloc failed\n");
+        exit(1);
+    }
+    t->context.uc_stack.ss_size = SIGSTKSZ;
+    t->context.uc_link = NULL;
 
-    getcontext(&thread->context);
-    thread->context.uc_stack.ss_sp = malloc(1024 * 8);
-    thread->context.uc_stack.ss_size = 1024 * 8;
-    makecontext(&thread->context, (void (*)(void))func, 1, args);
+    makecontext(&t->context, (void (*)())func, 1, args);
 
-    enqueue(ready_queue, thread);
-    enqueue(running_thread->child_queue, thread);
+    return t;
+}
 
-    // printf("Thread with tid %d created...\n", thread->tid);
+cthread cthread_create(void (*func)(void *), void *args)
+{
+    cthread *t = setup_thread(func, args);
+    t->tid = thread_id++;
+    t->parent = running_thread;
+    t->child_count = 0;
+    t->child_spot = running_thread->child_count;
+    t->blocked = 0;
+    t->join_child = NULL;
 
-    return (void *)thread;
+    running_thread->children_list[running_thread->child_count++] = t;
+
+    // Put thread in ready queue
+    enqueue(&ready_queue, t);
+    return *t;
 }
 
 void cthread_yield(void)
 {
-    cthread *temp = running_thread;
-    enqueue(ready_queue, running_thread);
-
-    cthread *temp2 = dequeue(ready_queue);
-    if (temp2 != NULL)
+    if (ready_queue.head)
     {
-        running_thread = temp2;
-        swapcontext(&temp->context, &temp2->context);
+        enqueue(&ready_queue, running_thread);
+        running_thread = dequeue(&ready_queue);
+        swapcontext(&ready_queue.tail->context, &running_thread->context);
     }
     else
     {
-        setcontext(main_context);
+        // pass
     }
 }
 
-int cthread_join(void *thread)
+int cthread_join(cthread *thread)
 {
-    cthread *child_thread = (cthread *)thread;
+    cthread *t = thread;
 
-    if (child_thread->state != TERMINATED)
+    if (t->exit)
     {
-        if (child_thread->parent == running_thread)
-        {
-            cthread *temp = running_thread;
-            enqueue(blocked_queue, running_thread);
-            cthread *temp2 = dequeue(ready_queue);
-            if (temp2 != NULL)
-            {
-                running_thread = temp2;
-                swapcontext(&temp->context, &temp2->context);
-            }
-            else
-            {
-                setcontext(main_context);
-            }
-            return 0;
-        }
-        else
-            return -1;
+        return -1;
     }
+
+    int i = 0;
+    char is_child = 0;
+    for (i = 0; i < running_thread->child_count; i++)
+    {
+        if (running_thread->children_list[i]->tid == t->tid)
+        {
+            is_child = 1;
+        }
+    }
+
+    if (!is_child)
+    {
+        return -1;
+    }
+
+    running_thread->blocked = 1;
+    running_thread->join_child = t;
+
+    swapcontext(&running_thread->context, &scheduler_context);
 
     return 0;
 }
 
 void cthread_join_all(void)
 {
-    node *temp = running_thread->child_queue->head;
-
-    int flag = 0;
-    while (temp)
+    if (running_thread->child_count == 0)
     {
-        if (exists_in_q(ready_queue, temp->thread))
-        {
-            flag = 1;
-            break;
-        }
-
-        temp = temp->next;
+        return;
     }
 
-    if (flag == 1)
-    {
-        cthread *temp_thread = running_thread;
-        enqueue(blocked_queue, running_thread);
-        cthread *temp_thread_2 = dequeue(ready_queue);
+    running_thread->blocked = 1;
+    swapcontext(&running_thread->context, &scheduler_context);
 
-        if (temp_thread_2)
-        {
-            running_thread = temp_thread_2;
-            swapcontext(&temp_thread->context, &temp_thread_2->context);
-        }
-        else
-        {
-            setcontext(main_context);
-        }
-    }
+    return;
 }
 
 void cthread_exit(void)
 {
-    int flag = 0;
-
-    cthread *temp = running_thread->parent;
-
-    if (temp)
+    // Handle any blocked parent
+    cthread *t = running_thread->parent;
+    if (t)
     {
-        node *temp_node = temp->child_queue->head;
-
-        while (temp_node)
+        if (t->blocked)
         {
-            if (temp_node->thread == running_thread)
-            {
-                delete_thread(running_thread->parent->child_queue, running_thread);
-                break;
+            if (t->join_child)
+            { // If join, not join all
+                if (t->join_child->tid == running_thread->tid)
+                {
+                    t->blocked = 0;
+                    t->join_child = NULL;
+                    enqueue(&ready_queue, t);
+                }
             }
-            temp_node = temp_node->next;
-        }
-    }
-
-    node *temp_node_2 = blocked_queue->head;
-    if (exists_in_q(blocked_queue, running_thread->parent))
-    {
-        while (temp_node_2)
-        {
-            if (temp_node_2->thread == running_thread)
-            {
-                flag = 1;
-                break;
-            }
-            temp_node_2 = temp_node_2->next;
-        }
-
-        if (flag == 1)
-        {
-            if (temp_node_2->thread->blocked_on == running_thread->tid)
-            {
-                temp_node_2->thread->blocked_on = 0;
-                delete_thread(blocked_queue, temp_node_2->thread);
-                enqueue(ready_queue, temp_node_2->thread);
-            }
-            else if (temp_node_2->thread->child_queue->head == NULL)
-            {
-                delete_thread(blocked_queue, temp_node_2->thread);
-                enqueue(ready_queue, temp_node_2->thread);
+            else
+            { // If join all
+                if (t->child_count == 1)
+                {
+                    t->blocked = 0;
+                    enqueue(&ready_queue, t);
+                }
             }
         }
+        // Update children status in the parent thread
+        int temp = running_thread->child_spot;
+        t->children_list[temp] = t->children_list[t->child_count - 1];
+        t->children_list[temp]->child_spot = temp;
+        t->child_count--;
     }
-
-    node *temp_node_3 = running_thread->child_queue->head;
-    while (temp_node_3)
+    // Null all the parent pointer of its children
+    int i;
+    for (i = 0; i < running_thread->child_count; i++)
     {
-        if (running_thread == main_thread)
+        running_thread->children_list[i]->parent = NULL;
+    }
+    // Set exit tag so the engine knows to stop thread
+    running_thread->exit = 1;
+    swapcontext(&running_thread->context, &scheduler_context);
+}
+
+// scheduler
+int thread_scheduler(void)
+{
+    while (1)
+    {
+        cthread *t;
+        if (ready_queue.head == NULL)
         {
-            temp_node_3->thread->parent = NULL;
+            return 0;
         }
-        else
+        t = dequeue(&ready_queue);
+
+        running_thread = t;
+        swapcontext(&scheduler_context, &running_thread->context);
+
+        t = running_thread;
+        if (t->exit)
         {
-            temp_node_3->thread->parent = main_thread;
-            enqueue(main_thread->child_queue, temp_node_3->thread);
+            free(t->context.uc_stack.ss_sp);
+            free(t);
+            t = NULL;
         }
-        temp_node_3 = temp_node_3->next;
-    }
-
-    running_thread->state = TERMINATED;
-    cthread *temp_thread = running_thread;
-
-    cthread *temp_thread_2 = dequeue(ready_queue);
-
-    if (temp_thread_2)
-    {
-        running_thread = temp_thread_2;
-        swapcontext(&temp_thread->context, &temp_thread_2->context);
-    }
-    {
-
-        swapcontext(&temp_thread->context, main_context);
     }
 }

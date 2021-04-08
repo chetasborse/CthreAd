@@ -1,48 +1,57 @@
-#include<stdio.h>
-#include<unistd.h>
+#include <stdio.h>
+#include <unistd.h>
 #include "cthread.h"
 
-typedef struct nums {
+typedef struct nums
+{
     int a;
     int b;
-}nums;
+    int res;
+} nums;
 
-void *add(void *args) {
+void add(void *args)
+{
     nums *num = (nums *)args;
     int *res = (int *)malloc(sizeof(int));
-    printf("Addition of numbers is %d\n", num->a+num->b);
-    sleep(1);
-    printf("Hello %d %d\n", num->a, num->b);
-    sleep(1);
-    printf("Hello again\n");
+    printf("a: %d\tb: %d\n", num->a, num->b);
+    cthread_yield();
+    sleep(3);
+    puts("hello");
+    cthread_yield();
     *res = num->a + num->b;
-    return res;
+    num->res = *res;
+    cthread_exit();
 }
 
-void *loop(void *args) {
+void loop(void *args)
+{
     int i = 5;
-    while(i > 0) {
+    while (i > 0)
+    {
         printf("...printing\n");
         sleep(1);
+        cthread_yield();
         i--;
     }
-    return NULL;
+    cthread_exit();
 }
 
-int main() {
+void func(void *args)
+{
+    cthread_create(loop, 0);
+    cthread_create(add, args);
+    cthread_join_all();
 
-    cthread_init();
-    cthread c1, c2;
-    int *result;
-    nums num1;
-    num1.a = 4;
-    num1.b = 4;
-    int pid1 = cthread_create(&c1, add, &num1);
-    int pid2 = cthread_create(&c2, loop, NULL);
+    cthread_exit();
+}
 
-    cthread_join(&c1, (void *) &result);
-    cthread_join(&c2, NULL);    
+int main()
+{
+    int a = 10, b = 12;
+    nums num;
+    num.a = a;
+    num.b = b;
 
-    printf("Result is %d\n", *result);
-    return 0;
+    cthread_init(func, (void *)&num);
+    printf("Result is %d\n", num.res);
 }

@@ -7,40 +7,29 @@
 #include <setjmp.h>
 #include <ucontext.h>
 
-// node in a queue
-typedef struct node
+// tcb of thread
+typedef struct cthread
 {
-    struct cthread *thread;
-    struct node *next;
-} node;
+    int tid;                           //thread id
+    ucontext_t context;                //context of the thread
+    struct cthread *next;              // pointer to next thread
+    struct cthread *prev;              // pointer to previous thread
+    struct cthread *parent;            // pointer to parent thread
+    struct cthread *children_list[10]; // pointer to list of child threads
+    int child_count;                   //number of child threads
+    int child_spot;
+    char blocked;               // indicate if a thread is blocked
+    struct cthread *join_child; //join a child thread
+    char exit;
+} cthread;
 
 // queue structure for thread pool
 typedef struct thread_queue
 {
-    node *head;
-    node *tail;
-    int size;
+    cthread *head;
+    cthread *tail;
+    int value;
 } thread_queue;
-
-// tcb of thread
-typedef struct cthread
-{
-    int tid;                   //thread id
-    int execution;             // 1 if the execution of thread completes, 0 if still executing
-    int ptid;                  //pid of the calling process
-    void *stack_start;         //address of the start of the stack
-    int stack_size;            // size of the stack
-    void *args;                //Pointer pointing to arguments passed to the function
-    void *result;              //Pointer pointing to return value of the function
-    void *(*func)(void *);     //Pointer pointing to the address of the function called
-    sigjmp_buf env;            //Saves current PC and SP when sigsetjmp is called
-    int state;                 // state of the thread
-    ucontext_t context;        // context of thread
-    thread_queue *child_queue; // points to child queue
-    struct cthread *parent;    //pointer to parent thread
-    int blocked_on;            // tid of the blocking thread
-
-} cthread;
 
 // states of any thread
 typedef enum state
@@ -54,16 +43,7 @@ typedef enum state
 } state;
 
 // structure for scheduler
-typedef struct scheduler
-{
-    thread_queue *main_queue;
-    thread_queue *wait;
-    cthread *main_thread;
-    cthread *current;
-
-    int priority_list[5];
-    int count;
-} scheduler;
+int thread_scheduler();
 
 typedef struct Semaphore
 {
@@ -71,11 +51,12 @@ typedef struct Semaphore
     thread_queue *sem_queue;
 } Semaphore;
 
-void cthread_init();
+void cthread_init(void (*func)(void *), void *args);
 int cthread_run(void *);
 void cthread_yield(void);
-void *cthread_create(void (*func)(void *), void *args);
-int cthread_join(void *);
+cthread cthread_create(void (*func)(void *), void *args);
+cthread *setup_thread(void (*func)(void *), void *args);
+int cthread_join(cthread *);
 void cthread_join_all(void);
 void cthread_exit();
 
