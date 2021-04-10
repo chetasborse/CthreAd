@@ -4,7 +4,6 @@
 #include<sys/wait.h>
 #include <stdlib.h>
 #include <setjmp.h>
-#include <stdatomic.h>
 
 // Structure of a thread
 typedef struct cthread {

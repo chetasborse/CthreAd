@@ -29,13 +29,12 @@ void *add(void *args) {
 
 void *count_to_big(void *arg) {
     cthread *c = cthread_get_self();
-    for(uint32_t i = 0; i < 10000000; i++) {
-        // cthread_mutex_lock(&lock);
-        cthread_spinlock_lock(&lock1);
+    for(uint32_t i = 0; i < 10000; i++) {
+        cthread_mutex_lock(&lock);
+        //cthread_spinlock_lock(&lock1);
         counter++;
-        cthread_spinlock_unlock(&lock1);
-        // cthread_mutex_unlock(&lock);
-
+        //cthread_spinlock_unlock(&lock1);
+        cthread_mutex_unlock(&lock);
     }
 }
 
