@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <setjmp.h>
 
+
 // Structure of a thread
 typedef struct cthread {
     int tid; //thread id
@@ -41,7 +42,8 @@ typedef struct cthread_spinlock {
 void cthread_init();
 int cthread_run(void *);
 int cthread_create(cthread *, void *(*f)(void *), void *);
-int cthread_join(cthread *, void **, struct timespec *);
+// int cthread_join(cthread *, void **, struct timespec *);
+int cthread_join(cthread *, void **);
 void cthread_exit(void *);
 int cthread_kill(cthread, int);
 cthread *cthread_get_self();

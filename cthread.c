@@ -60,7 +60,7 @@ cthread *get_details(int tid) {
 
 
 // System call to halt parent till the value in futex_val doesn't change to 0
-int futex_wait(void* addr, int tid, struct timespec *time){
+int futex_wait(void* addr, int tid){
   return syscall(SYS_futex,addr,FUTEX_WAIT, tid, NULL, NULL, 0);
 }
 
@@ -148,12 +148,12 @@ int cthread_create(cthread *c, void *(*f)(void *), void *args) {
 }
 
 // Waits for the thread to complete its execution
-int cthread_join(cthread *c, void **result, struct timespec *time) {
+int cthread_join(cthread *c, void **result) {
     
     if(c->execution == 1)
         return 0;
         
-    futex_wait(&c->futex_val, c->tid, time);
+    futex_wait(&c->futex_val, c->tid);
 
     if(result != NULL)
         *result = c->result;
@@ -204,7 +204,7 @@ int cthread_mutex_lock(cthread_mutex *cm) {
         if(flag_status == 0) {
             break;
         }
-        futex_wait(&cm->flag, 1, NULL);
+        futex_wait(&cm->flag, 1);
     }
     return 1;
 }

@@ -30,11 +30,11 @@ void *add(void *args) {
 void *count_to_big(void *arg) {
     cthread *c = cthread_get_self();
     for(uint32_t i = 0; i < 10000; i++) {
-        cthread_mutex_lock(&lock);
-        //cthread_spinlock_lock(&lock1);
+        //cthread_mutex_lock(&lock);
+        cthread_spinlock_lock(&lock1);
         counter++;
-        //cthread_spinlock_unlock(&lock1);
-        cthread_mutex_unlock(&lock);
+        cthread_spinlock_unlock(&lock1);
+        //cthread_mutex_unlock(&lock);
     }
 }
 
@@ -73,9 +73,9 @@ int main() {
     // cthread_join(&c1, (void *) &result, NULL);
     // cthread_join(&c2, NULL, NULL);
 
-    cthread_join(&c1, NULL, NULL);
-    cthread_join(&c2, NULL, NULL);
-    cthread_join(&c3, NULL, NULL);
+    cthread_join(&c1, NULL);
+    cthread_join(&c2, NULL);
+    cthread_join(&c3, NULL);
     printf("the value is %d\n", counter);
     //printf("Contents of the lock\nfutex_val: %u\npid: %d\n", lock.futex_val, lock.tid);
     if(lock.flag == 0)
