@@ -1,0 +1,8 @@
+test1: Test for cthread_create and cthread_join
+test2: Test for cthread_create and cthread_join with parameters and return value
+test3: Test for synchronization with mutex lock
+test4: Test for synchronization with spinlock
+test5: Test for fetching the current thread
+test6: Test for cthread_exit
+test7: Test for sending signal to thread
+test8: Matrix multiplication with and without threads(Performance)
