@@ -2,6 +2,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<unistd.h>
+#include<sys/time.h>
 
 typedef struct arg_struct {
     int ***a1;
@@ -106,17 +107,19 @@ int main() {
     args.r1 = r1;
     args.c2 = c2;
     args.r2 = r2;
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
     int pid1 = cthread_create(&thread1, mat_mul, &args);
     int pid2 = cthread_create(&thread2, mat_mul1, &args);
     int pid3 = cthread_create(&thread3, mat_mul2, &args);
     cthread_join(&thread1, NULL);
     cthread_join(&thread2, NULL);
     cthread_join(&thread3, NULL);
-    // for(i = 0; i < r1; i++) {
-    //     printf("\n");
-    //     for(j = 0; j < c2; j++)
-    //         printf("%d ", c[i][j]);
-    // }
+    gettimeofday(&end, NULL);
+    long seconds = (end.tv_sec - start.tv_sec);
+    float micros = ((seconds * 1000000) + end.tv_usec) - (start.tv_usec);
+    micros = micros / 1000000;
+    printf("Time elapsed: %f seconds\n", micros);
     printf("Done\n");
     return 0;    
 }   

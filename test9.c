@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<unistd.h>
+#include<sys/time.h>
 
 void mat_muls(int ***a1, int ***b1, int ***c1, int r1, int c2, int r2) {
     int i, j, k, sum = 0;
@@ -48,8 +49,14 @@ int main() {
             scanf("%d", &b[i][j]);
         }
     }
-
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
     mat_muls(&a, &b, &c, r1, c2, r2);
+    gettimeofday(&end, NULL);
+    long seconds = (end.tv_sec - start.tv_sec);
+    float micros = ((seconds * 1000000) + end.tv_usec) - (start.tv_usec);
+    micros = micros / 1000000;
+    printf("Time elapsed: %f seconds\n", micros);
     printf("Done\n");
     return 0;    
 }
