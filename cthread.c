@@ -60,7 +60,7 @@ cthread *get_details(int tid) {
 
 
 // System call to halt parent till the value in futex_val doesn't change to 0
-int futex_wait(void* addr, int tid, struct timespec *time){
+int futex_wait(void* addr, int tid){
   return syscall(SYS_futex,addr,FUTEX_WAIT, tid, NULL, NULL, 0);
 }
 
@@ -72,6 +72,22 @@ int futex_wake(void* addr){
 // System call to send signal to the intended thread
 int thread_kill(int tid, int signal) {
     return syscall(SYS_tgkill, getpid(), tid, signal);
+}
+
+// Sets number in the passed address to 1 and returns the previous value
+int test_and_set(int *flag) {
+    int result, set = 1;
+    asm volatile("xchgl %0, %1" :
+        "+m" (*flag), "=a" (result):
+        "1" (set) :
+        "cc");
+    return result;
+}
+
+// Sets number in the passed address to 0
+int clear(int *flag) {
+    asm volatile("movl $0, %0" : "+m" (*flag) : );
+    return 1;
 }
 
 // Initialisation of threads
@@ -132,16 +148,15 @@ int cthread_create(cthread *c, void *(*f)(void *), void *args) {
 }
 
 // Waits for the thread to complete its execution
-int cthread_join(cthread *c, void **result, struct timespec *time) {
+int cthread_join(cthread *c, void **result) {
     
     if(c->execution == 1)
         return 0;
         
-    futex_wait(&c->futex_val, c->tid, time);
+    futex_wait(&c->futex_val, c->tid);
 
     if(result != NULL)
         *result = c->result;
-    printf("here");
 
     free((void *)(c->stack_start + 1 - SIZESTACK));
     return 0;
@@ -185,18 +200,18 @@ void cthread_mutex_init(cthread_mutex *lock) {
 // Locks the critical section in the thread using sleeplock
 int cthread_mutex_lock(cthread_mutex *cm) {
     while(1) {
-        int flag_status = atomic_flag_test_and_set_explicit(&cm->flag, memory_order_relaxed);
+        int flag_status = test_and_set(&cm->flag);
         if(flag_status == 0) {
             break;
         }
-        futex_wait(&cm->flag, 1, NULL);
+        futex_wait(&cm->flag, 1);
     }
     return 1;
 }
 
 // Unlocks the critical section of the thread using sleeplock
 int cthread_mutex_unlock(cthread_mutex *cm) {
-    atomic_flag_clear_explicit(&cm->flag, memory_order_relaxed);
+    clear(&cm->flag);
     futex_wake(&cm->flag);
     return 1;
 }
@@ -209,7 +224,7 @@ void cthread_spinlock_init(cthread_spinlock *lock) {
 // Locks the critical section in the thread using spinlock
 int cthread_spinlock_lock(cthread_spinlock *sl) {
     while(1) {
-        int flag_status = atomic_flag_test_and_set_explicit(&sl->flag, memory_order_relaxed);
+        int flag_status = test_and_set(&sl->flag);
         if(flag_status == 0) {
             break;
         }
@@ -219,7 +234,7 @@ int cthread_spinlock_lock(cthread_spinlock *sl) {
 
 // Unlocks the critical section of the thread using spinlock
 int cthread_spinlock_unlock(cthread_spinlock *sl) {
-    atomic_flag_clear_explicit(&sl->flag, memory_order_relaxed);
+    clear(&sl->flag);
     return 1;
 }
 
