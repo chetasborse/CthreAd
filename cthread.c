@@ -1,5 +1,5 @@
 #define _GNU_SOURCE
-#include<sched.h>
+#include <sched.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <setjmp.h>
 #include <sys/wait.h>
-#include<signal.h>
+#include <signal.h>
 #include <linux/futex.h>
 #include <syscall.h>
 #include "cthread.h"
@@ -15,7 +15,7 @@
 #define SIZESTACK (1024 * 1024)
 
 // Pushes a thread to the queue
-void enq(cthread *d) {
+static void enq(cthread *d) {
     queue *q = threads_queue;
 	if(q->head == NULL) {
 		q->head = d;
@@ -29,7 +29,7 @@ void enq(cthread *d) {
 }
 
 // Prints all the running threads
-void traverse() {
+static void traverse() {
     queue *q = threads_queue;
     cthread *ptr;
     ptr = q->head;
@@ -41,8 +41,33 @@ void traverse() {
 }
 
 // Checks if the queue is empty
-int qempty() {
+static int qempty() {
 	return (threads_queue->head == NULL);
+}
+
+// System call to halt parent till the value in futex_val doesn't change to 0
+static int futex_wait(void* addr, int tid){
+  return syscall(SYS_futex,addr,FUTEX_WAIT, tid, NULL, NULL, 0);
+}
+
+// Wakes only one process waiting in futex
+static int futex_wake(void* addr){
+  return syscall(SYS_futex,addr,FUTEX_WAKE, 1, NULL, NULL, 0);
+}
+
+// System call to send signal to the intended thread
+static int thread_kill(int tid, int signal) {
+    return syscall(SYS_tgkill, getpid(), tid, signal);
+}
+
+// Sets number in the passed address to 1 and returns the previous value
+static int test_and_set(int *flag) {
+    int result, set = 1;
+    asm("lock xchgl %0, %1" :
+        "+m" (*flag), "=a" (result):
+        "1" (set) :
+        "cc");
+    return result;
 }
 
 // Returns pointer to the thread struct with the given thread_id
@@ -58,37 +83,6 @@ cthread *get_details(int tid) {
     return NULL;
 }
 
-
-// System call to halt parent till the value in futex_val doesn't change to 0
-int futex_wait(void* addr, int tid){
-  return syscall(SYS_futex,addr,FUTEX_WAIT, tid, NULL, NULL, 0);
-}
-
-// Wakes only one process waiting in futex
-int futex_wake(void* addr){
-  return syscall(SYS_futex,addr,FUTEX_WAKE, 1, NULL, NULL, 0);
-}
-
-// System call to send signal to the intended thread
-int thread_kill(int tid, int signal) {
-    return syscall(SYS_tgkill, getpid(), tid, signal);
-}
-
-// Sets number in the passed address to 1 and returns the previous value
-int test_and_set(int *flag) {
-    int result, set = 1;
-    asm volatile("xchgl %0, %1" :
-        "+m" (*flag), "=a" (result):
-        "1" (set) :
-        "cc");
-    return result;
-}
-
-// Sets number in the passed address to 0
-int clear(int *flag) {
-    asm volatile("movl $0, %0" : "+m" (*flag) : );
-    return 1;
-}
 
 // Initialisation of threads
 void cthread_init() {
@@ -211,7 +205,7 @@ int cthread_mutex_lock(cthread_mutex *cm) {
 
 // Unlocks the critical section of the thread using sleeplock
 int cthread_mutex_unlock(cthread_mutex *cm) {
-    clear(&cm->flag);
+    cm->flag = 0;
     futex_wake(&cm->flag);
     return 1;
 }
@@ -234,7 +228,7 @@ int cthread_spinlock_lock(cthread_spinlock *sl) {
 
 // Unlocks the critical section of the thread using spinlock
 int cthread_spinlock_unlock(cthread_spinlock *sl) {
-    clear(&sl->flag);
+    sl->flag = 0;
     return 1;
 }
 

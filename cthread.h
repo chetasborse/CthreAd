@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#include<sched.h>
-#include<sys/types.h>
-#include<sys/wait.h>
+#include <sched.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <stdlib.h>
 #include <setjmp.h>
 
@@ -50,10 +50,10 @@ cthread *cthread_get_self();
 
 
 // Queue prototypes start here
-void enq(cthread *);
-int qempty();
-void traverse();
-cthread* get_details(int tid);
+static void enq(cthread *);
+static int qempty();
+static void traverse();
+static cthread* get_details(int tid);
 
 // Mutex lock prototypes
 void cthread_mutex_init(cthread_mutex *);
