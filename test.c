@@ -7,31 +7,27 @@ int counter = 0;
 
 void *func(void *args)
 {
-    int i = 4;
-    while (i > 0)
+    for (int i = 0; i < 20; i++)
     {
-        printf("Hello1!\n");
-        sleep(1);
-        i--;
+        counter++;
     }
+
     cthread_exit(NULL);
 }
 
 void *func2(void *args)
 {
-    int i = 4;
-    while (i > 0)
+    for (int i = 0; i < 20; i++)
     {
-        printf("Hello2!\n");
-        sleep(1);
-        --i;
+        counter++;
     }
+
     cthread_exit(NULL);
 }
 
 int main()
 {
-    int t1, t2;
+    int t1, t2, t3;
     cthread_init(1);
 
     t1 = cthread_create(func, NULL);
