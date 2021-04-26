@@ -12,7 +12,6 @@ void *func(void *args)
     {
         printf("Hello1!\n");
         sleep(1);
-        cthread_yield();
         i--;
     }
     cthread_exit(NULL);
@@ -24,7 +23,6 @@ void *func2(void *args)
     while (i > 0)
     {
         printf("Hello2!\n");
-        cthread_yield();
         sleep(1);
         --i;
     }
