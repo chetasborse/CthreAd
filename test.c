@@ -1,57 +1,47 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include "cthread.h"
 
-typedef struct nums
-{
-    int a;
-    int b;
-    int res;
-} nums;
+int counter = 0;
 
-void add(void *args)
+void *func(void *args)
 {
-    nums *num = (nums *)args;
-    int *res = (int *)malloc(sizeof(int));
-    printf("a: %d\tb: %d\n", num->a, num->b);
-    cthread_yield();
-    sleep(3);
-    puts("hello");
-    cthread_yield();
-    *res = num->a + num->b;
-    num->res = *res;
-    cthread_exit();
-}
-
-void loop(void *args)
-{
-    int i = 5;
+    int i = 4;
     while (i > 0)
     {
-        printf("...printing\n");
+        printf("Hello1!\n");
         sleep(1);
         cthread_yield();
         i--;
     }
-    cthread_exit();
+    cthread_exit(NULL);
 }
 
-void func(void *args)
+void *func2(void *args)
 {
-    cthread_create(loop, 0);
-    cthread_create(add, args);
-    cthread_join_all();
-
-    cthread_exit();
+    int i = 4;
+    while (i > 0)
+    {
+        printf("Hello2!\n");
+        cthread_yield();
+        sleep(1);
+        --i;
+    }
+    cthread_exit(NULL);
 }
 
 int main()
 {
-    int a = 10, b = 12;
-    nums num;
-    num.a = a;
-    num.b = b;
+    int t1, t2;
+    cthread_init(1);
 
-    cthread_init(func, (void *)&num);
-    printf("Result is %d\n", num.res);
+    t1 = cthread_create(func, NULL);
+    t2 = cthread_create(func2, NULL);
+
+    cthread_join(t1);
+    cthread_join(t2);
+
+    printf("Counter=%d\n", counter);
+    return 0;
 }

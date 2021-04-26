@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <time.h>
 #include "cthread.h"
 
 // variables
@@ -14,6 +15,8 @@ cthread *running_thread;
 
 ucontext_t scheduler_context;
 ucontext_t init_context;
+
+struct itimerval timer;
 
 int is_qempty(thread_queue *q)
 {
