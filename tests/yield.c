@@ -13,7 +13,6 @@ void *thread1(void *arg)
     for (i = 0; i < 10; ++i)
     {
         cnt += 1;
-        printf("%ld\n", cnt);
         cthread_yield();
     }
     cthread_exit(NULL);
@@ -26,7 +25,6 @@ void *thread2(void *arg)
     for (i = 0; i < 10; ++i)
     {
         cnt *= 2;
-        printf("%ld\n", cnt);
         cthread_yield();
     }
 
