@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <setjmp.h>
+#include <stdatomic.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/time.h>
@@ -212,4 +213,41 @@ void cthread_exit(void *ret_val)
     }
     setitimer(ITIMER_VIRTUAL, &start_timer, NULL);
     cthread_yield();
+}
+
+// synchronisation functions
+
+// Sets number in the passed address to 1 and returns the previous value
+int cthread_mutex_init(cthread_mutex *mutex)
+{
+    if (mutex)
+    {
+        atomic_init(&(mutex->flag), 0);
+    }
+
+    return 0;
+}
+
+int cthread_mutex_lock(cthread_mutex *mutex)
+{
+    while (1)
+    {
+        while (mutex->flag)
+            ;
+
+        int exp = 0;
+
+        if (atomic_compare_exchange_strong(&(mutex->flag), &exp, 1))
+        {
+            break;
+        }
+    }
+    return 0;
+}
+
+int cthread_mutex_unlock(cthread_mutex *mutex)
+{
+    atomic_store(&mutex->flag, 0);
+
+    return 0;
 }

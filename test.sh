@@ -25,3 +25,15 @@ then
 else
     echo "Stress test failed"
 fi
+
+gcc cthread2.o tests/sync1.c -o test
+t2=$(./test)
+echo "Running Synchronisation test..."
+echo "    Expected result: 300000"
+echo "    Actual result $t2"
+if [ $t2 == 300000 ]
+then
+    echo "    test passed"
+else
+    echo "    Stress test failed"
+fi
