@@ -48,11 +48,15 @@ void cthread_exit(void *ret_val);
 
 // defs for synchronisation
 
-typedef struct cthread_mutex
+typedef struct cthread_spinlock
 {
     int flag; //Tells if the lock is locked=1 or unlocked=0
-} cthread_mutex;
+} cthread_spinlock;
 
-int cthread_mutex_init(cthread_mutex *lock);
-int cthread_mutex_lock(cthread_mutex *cm);
-int cthread_mutex_unlock(cthread_mutex *cm);
+void cthread_spinlock_init(cthread_spinlock *lock);
+
+int cthread_spinlock_lock(cthread_spinlock *sl);
+
+int cthread_spinlock_unlock(cthread_spinlock *sl);
+
+void print_threads();

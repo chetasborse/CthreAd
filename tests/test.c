@@ -1,23 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "cthread.h"
-
-int counter = 0;
+#include "../cthread.h"
 
 void *func(void *args)
 {
+    int counter = 0;
+
     while (counter < 4)
     {
         counter++;
         puts("In1");
-        sleep(1);
+        cthread_yield();
+        // sleep(1);
     }
 
     cthread_exit(NULL);
 }
 void *func2(void *args)
 {
+    int counter = 0;
+
     while (counter < 4)
     {
         counter++;
@@ -28,15 +31,20 @@ void *func2(void *args)
 
 int main()
 {
-    int t1, t2, t3;
-    int x = 0, y = 0;
+    int t1, t2;
     cthread_init(1);
-
     t1 = cthread_create(func, NULL);
     t2 = cthread_create(func2, NULL);
+    int x = 0;
+    while (x < 7)
+    {
+        puts("main");
+        sleep(1);
+        x++;
+    }
 
-    cthread_join(t1, NULL);
-    cthread_join(t2, NULL);
+    cthread_join(t1);
+    cthread_join(t2);
 
     return 0;
 }

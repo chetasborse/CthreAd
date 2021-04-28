@@ -218,36 +218,36 @@ void cthread_exit(void *ret_val)
 // synchronisation functions
 
 // Sets number in the passed address to 1 and returns the previous value
-int cthread_mutex_init(cthread_mutex *mutex)
+static int test_and_set(int *flag)
 {
-    if (mutex)
-    {
-        atomic_init(&(mutex->flag), 0);
-    }
-
-    return 0;
+    int result, set = 1;
+    asm("lock xchgl %0, %1"
+        : "+m"(*flag), "=a"(result)
+        : "1"(set)
+        : "cc");
+    return result;
 }
 
-int cthread_mutex_lock(cthread_mutex *mutex)
+void cthread_spinlock_init(cthread_spinlock *lock)
+{
+    lock->flag = 0;
+}
+
+int cthread_spinlock_lock(cthread_spinlock *sl)
 {
     while (1)
     {
-        while (mutex->flag)
-            ;
-
-        int exp = 0;
-
-        if (atomic_compare_exchange_strong(&(mutex->flag), &exp, 1))
+        int flag_status = test_and_set(&sl->flag);
+        if (flag_status == 0)
         {
             break;
         }
     }
-    return 0;
+    return 1;
 }
 
-int cthread_mutex_unlock(cthread_mutex *mutex)
+int cthread_spinlock_unlock(cthread_spinlock *sl)
 {
-    atomic_store(&mutex->flag, 0);
-
-    return 0;
+    sl->flag = 0;
+    return 1;
 }

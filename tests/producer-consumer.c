@@ -14,18 +14,18 @@
 int queue_size = 0;
 int iterations = 10;
 
-cthread_mutex queue_lock;
+cthread_spinlock queue_lock;
 
 void *producer(void *data)
 {
     while (iterations)
     {
-        cthread_mutex_lock(&queue_lock);
+        cthread_spinlock_lock(&queue_lock);
         queue_size++;
         printf("Produced: virtual queue has size %d\n", queue_size);
         fflush(stdout);
         iterations--;
-        cthread_mutex_unlock(&queue_lock);
+        cthread_spinlock_unlock(&queue_lock);
 
         cthread_yield();
     }
@@ -38,7 +38,7 @@ void *consumer(void *data)
 {
     while (iterations)
     {
-        cthread_mutex_lock(&queue_lock);
+        cthread_spinlock_lock(&queue_lock);
 
         if (queue_size == 0)
         {
@@ -53,7 +53,7 @@ void *consumer(void *data)
         }
 
         iterations--;
-        cthread_mutex_unlock(&queue_lock);
+        cthread_spinlock_unlock(&queue_lock);
         cthread_yield();
     }
 
@@ -72,7 +72,7 @@ int main(void)
     cthread_init(1);
 
     // Initialize the mutex
-    cthread_mutex_init(&queue_lock);
+    cthread_spinlock_init(&queue_lock);
 
     // Initialize threads
     producerID = cthread_create(producer, NULL);
