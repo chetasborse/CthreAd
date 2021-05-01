@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 #include<stdio.h>
 #include<signal.h>
-#include "cthread.h"
+#include "../cthread.h"
 #include <unistd.h>
 
 struct sigaction sa1;

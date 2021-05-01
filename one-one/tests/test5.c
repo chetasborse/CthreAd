@@ -1,6 +1,6 @@
 #include<stdio.h>
 #include<unistd.h>
-#include "cthread.h"
+#include "../cthread.h"
 
 void *func(void *args) {
     cthread *c1 = cthread_get_self();
