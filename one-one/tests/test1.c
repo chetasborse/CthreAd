@@ -1,6 +1,6 @@
 #include<stdio.h>
 #include<unistd.h>
-#include "cthread.h"
+#include "../cthread.h"
 
 void *loop(void *args) {
     int i = 4;
