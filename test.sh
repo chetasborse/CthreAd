@@ -1,4 +1,7 @@
 #!/bin/bash
+
+gcc cthread2.c -c -Wall
+
 gcc cthread2.o tests/yield.c -o test
 echo "---------------------------------"
 
