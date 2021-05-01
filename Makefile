@@ -5,4 +5,4 @@ cthread.o: cthread.c
 		$(CC) $(CFLAGS) -c cthread2.c
 
 clean:
-		$(RM) fibtest *.o *~
+		$(RM) test *.o *~

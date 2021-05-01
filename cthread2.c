@@ -16,17 +16,20 @@ cthread thread_context[MAX_THREADS];
 cthread *running_thread;
 cthread *new_thread = NULL;
 
-char stack[STACK_SIZE * MAX_THREADS];
+char stack[SIGSTKSZ * (MAX_THREADS + 1)];
 
 int thread_id = 0;
 int created = 0;
+int main_created = 0;
 int preempt = 0;
+int thread_count = 0;
 
 struct itimerval start_timer;
 struct itimerval zero_timer;
 
 void sigusr_handler(int sig)
 {
+
     if (setjmp(new_thread->buffer) == 0)
     {
         created = 1;
@@ -35,7 +38,7 @@ void sigusr_handler(int sig)
     {
         if (preempt)
         {
-            setitimer(ITIMER_VIRTUAL, &start_timer, NULL);
+            ualarm(25000, 0);
         }
         running_thread->function(running_thread->args);
     }
@@ -51,17 +54,16 @@ void cthread_init(int pre)
     for (int i = 0; i < MAX_THREADS; i++)
     {
         cthread new;
+        new.function = NULL;
+        new.args = NULL;
+        new.ret_val = NULL;
         if (i == 0)
-        {
-            new.function = NULL;
-            new.args = NULL;
-            new.ret_val = NULL;
             new.state = ACTIVE;
-        }
+        else
+            new.state = INVALID;
 
         new.tid = i;
-        new.stack = stack + (i * STACK_SIZE);
-        new.state = INVALID;
+        new.stack = stack + (i * SIGSTKSZ);
 
         thread_context[i] = new;
     }
@@ -84,30 +86,9 @@ void cthread_init(int pre)
     // alarm
     if (pre)
     {
-        struct sigaction sa_alarm;
-        memset(&sa_alarm, 0, sizeof(struct sigaction));
-        sa_alarm.sa_handler = sigalarm_handler;
-        sigemptyset(&sa_alarm.sa_mask);
-
-        if (sigaction(SIGVTALRM, &sa_alarm, NULL) == -1)
-        {
-            printf("Error in sigaction/SIGALARM\n");
-            exit(1);
-        }
-
-        preempt = pre;
-
-        start_timer.it_interval.tv_sec = 0;
-        start_timer.it_interval.tv_usec = 25000;
-        start_timer.it_value.tv_sec = 0;
-        start_timer.it_value.tv_usec = 25000;
-
-        zero_timer.it_interval.tv_sec = 0;
-        zero_timer.it_interval.tv_usec = 0;
-        zero_timer.it_value.tv_sec = 0;
-        zero_timer.it_value.tv_usec = 0;
-
-        setitimer(ITIMER_VIRTUAL, &start_timer, NULL);
+        preempt = 1;
+        signal(SIGALRM, sigalarm_handler);
+        ualarm(25000, 0);
     }
 }
 
@@ -124,7 +105,7 @@ int cthread_create(void *(*func)(void *), void *args)
 
             stack_t new;
             new.ss_flags = 0;
-            new.ss_size = STACK_SIZE;
+            new.ss_size = SIGSTKSZ;
             new.ss_sp = thread_context[i].stack;
 
             if (sigaltstack(&new, NULL) == -1)
@@ -141,7 +122,6 @@ int cthread_create(void *(*func)(void *), void *args)
             };
 
             created = 0;
-
             return i;
         }
     }
@@ -150,6 +130,7 @@ int cthread_create(void *(*func)(void *), void *args)
 
 int cthread_yield(void)
 {
+    ualarm(0, 0);
     if (preempt)
     {
         setitimer(ITIMER_VIRTUAL, &zero_timer, NULL);
@@ -171,7 +152,7 @@ int cthread_yield(void)
             {
                 if (preempt)
                 {
-                    setitimer(ITIMER_VIRTUAL, &start_timer, NULL);
+                    ualarm(25000, 0);
                 }
             }
             return 1;
@@ -183,19 +164,20 @@ int cthread_yield(void)
 
 void cthread_join(int tid)
 {
+    ualarm(0, 0);
     running_thread->state = BLOCKED;
     thread_context[tid].joined_on = running_thread->tid;
 
     if (setjmp(running_thread->buffer) == 0)
     {
         running_thread = &thread_context[tid];
-        setitimer(ITIMER_VIRTUAL, &start_timer, NULL);
+        ualarm(25000, 0);
         longjmp(running_thread->buffer, 1);
     }
     else
     {
         if (preempt)
-            setitimer(ITIMER_VIRTUAL, &start_timer, NULL);
+            ualarm(25000, 0);
     }
 }
 
@@ -208,10 +190,8 @@ void cthread_exit(void *ret_val)
     {
         running_thread = &thread_context[running_thread->joined_on];
         running_thread->state = ACTIVE;
-        setitimer(ITIMER_VIRTUAL, &start_timer, NULL);
         longjmp(running_thread->buffer, 1);
     }
-    setitimer(ITIMER_VIRTUAL, &start_timer, NULL);
     cthread_yield();
 }
 
@@ -250,4 +230,18 @@ int cthread_spinlock_unlock(cthread_spinlock *sl)
 {
     sl->flag = 0;
     return 1;
+}
+
+// utility function to print queue
+void print_queue()
+{
+    printf("----------x---------\n");
+    for (int i = 0; i < MAX_THREADS; i++)
+    {
+        printf("TID: %d\n", thread_context[i].tid);
+        printf("State: %d\n", thread_context[i].state);
+        printf("Waiting on: %d\n", thread_context[i].joined_on);
+        printf("\n");
+    }
+    printf("----------x---------\n");
 }

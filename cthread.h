@@ -59,4 +59,4 @@ int cthread_spinlock_lock(cthread_spinlock *sl);
 
 int cthread_spinlock_unlock(cthread_spinlock *sl);
 
-void print_threads();
+void print_queue();
