@@ -1,7 +1,4 @@
-//
-// Created by Wayne on 24/1/13.
-//
-
+// inspired by test created by Wayne
 #include <stdio.h>
 #include "../cthread.h"
 

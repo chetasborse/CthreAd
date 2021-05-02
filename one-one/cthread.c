@@ -78,6 +78,7 @@ static int test_and_set(int *flag)
         : "1"(set)
         : "cc");
     return result;
+    //reference - xv6
 }
 
 // Returns pointer to the thread struct with the given thread_id
