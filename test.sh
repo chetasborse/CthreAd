@@ -115,10 +115,6 @@ sleep 0.4
 echo "."
 
 
-gcc ./many-one/cthread2.c -c -Wall
-
-gcc cthread2.o ./many-one/tests/yield.c -o test
-
 echo " "
 echo "-------------------------------------------------------------------"
 echo " "
@@ -127,7 +123,7 @@ sleep 1
 echo "Test 1: Running yield test..."
 echo " "
 sleep 1
-t1=$(./test)
+t1=$(./test10)
 if [ $t1 == 2046 ]
 then
     echo "Yield Test passed"
@@ -141,12 +137,10 @@ echo " "
 sleep 2
 
 
-gcc cthread2.o ./many-one/tests/args.c -o test
-
 echo "Test 2: Running arguments test..."
 echo " "
 sleep 1
-t2=$(./test)
+t2=$(./test11)
 if [ $t2 == 36 ]
 then
     echo "Arguments Test passed"
@@ -160,12 +154,10 @@ echo " "
 sleep 2
 
 
-gcc cthread2.o ./many-one/tests/stress.c -o test
-
 echo "Test 3: Running Stress test with maximum threads..."
 echo " "
 sleep 1
-t2=$(./test)
+t2=$(./test12)
 if [ $t2 == 512 ]
 then
     echo "Stress Test passed"
@@ -179,10 +171,9 @@ echo " "
 sleep 2
 
 
-gcc cthread2.o ./many-one/tests/sync1.c -o test
 echo "Test 4: Running Synchronisation test #1..."
 sleep 1
-t2=$(./test)
+t2=$(./test13)
 echo "    Expected result: 300000"
 echo "    Actual result $t2"
 echo " "
@@ -199,22 +190,20 @@ echo " "
 sleep 2
 
 
-gcc cthread2.o ./many-one/tests/sync2.c -o test
 echo "Test 5: Running Synchronisation test #2..."
 echo " "
 sleep 1
-./test
+./test14
 
 echo " "
 echo "-------------------------------------------------------------------"
 echo " "
 sleep 2
 
-gcc cthread2.o ./many-one/tests/producer-consumer.c -o test
 echo "Test 6: Running Producer Consumer test with 1 producer, 2 consumers..."
 echo " "
 sleep 1
-./test
+./test15
 
 echo " "
 echo "-------------------------------------------------------------------"
