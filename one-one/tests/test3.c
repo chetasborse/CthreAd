@@ -1,20 +1,23 @@
-#include<stdio.h>
-#include<unistd.h>
+#include <stdio.h>
+#include <unistd.h>
 #include "../cthread.h"
 
 int counter, limit = 1000000;
 cthread_mutex lock;
 
-void *count_to_big(void *arg) {
+void *count_to_big(void *arg)
+{
     cthread *c = cthread_get_self();
-    for(int i = 0; i < limit; i++) {
+    for (int i = 0; i < limit; i++)
+    {
         cthread_mutex_lock(&lock);
         counter++;
         cthread_mutex_unlock(&lock);
     }
 }
 
-int main() {
+int main()
+{
     cthread_init();
     cthread_mutex_init(&lock);
     cthread c1, c2, c3;

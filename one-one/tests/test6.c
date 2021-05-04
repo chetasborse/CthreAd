@@ -1,15 +1,17 @@
-#include<stdio.h>
-#include<unistd.h>
+#include <stdio.h>
+#include <unistd.h>
 #include "../cthread.h"
 
-typedef struct nums {
+typedef struct nums
+{
     int a;
     int b;
-}nums;
+} nums;
 
 int res;
 
-void *add(void *args) {
+void *add(void *args)
+{
     nums *num = (nums *)args;
     sleep(1);
     res = num->a + num->b;
@@ -17,7 +19,8 @@ void *add(void *args) {
     cthread_exit(&res);
 }
 
-int main() {
+int main()
+{
     cthread_init();
     int i = 4;
     nums num1;
@@ -26,7 +29,8 @@ int main() {
     cthread c1;
     printf("From main: Numbers are %d and %d\n", num1.a, num1.b);
     int pid1 = cthread_create(&c1, add, &num1);
-    while(i > 0) { //To simulate execution of some other process in main
+    while (i > 0)
+    { //To simulate execution of some other process in main
         sleep(1);
         i--;
     }

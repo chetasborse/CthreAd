@@ -1,29 +1,33 @@
 #define _GNU_SOURCE
-#include<stdio.h>
-#include<signal.h>
+#include <stdio.h>
+#include <signal.h>
 #include "../cthread.h"
 #include <unistd.h>
 
 struct sigaction sa1;
 
-void handle_sigusr1(int sig) {
-	fflush(stdout);
+void handle_sigusr1(int sig)
+{
+    fflush(stdout);
     printf("Signal received by thread %d\n", gettid());
 }
 
-void *func(void *args) {
+void *func(void *args)
+{
     int i = 5;
-    while(i > 0) {
+    while (i > 0)
+    {
         sleep(1);
         i--;
     }
     return NULL;
 }
 
-int main() {
+int main()
+{
     sa1.sa_handler = &handle_sigusr1;
-	sigemptyset(&sa1.sa_mask);
-	sigaction(SIGUSR1, &sa1, NULL);
+    sigemptyset(&sa1.sa_mask);
+    sigaction(SIGUSR1, &sa1, NULL);
 
     cthread_init();
     cthread c1;

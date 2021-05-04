@@ -1,30 +1,25 @@
 #define _GNU_SOURCE
 #include <setjmp.h>
+
+// maximum number of threads can be altered
 #define MAX_THREADS 10
+
 // tcb of thread
 typedef struct cthread
 {
-    int tid; //thread id
-    jmp_buf buffer;
-    char *stack;
+    int tid;        //thread id
+    jmp_buf buffer; // buffer of the running thread
+    char *stack;    // stack allocated to the thread
 
-    void *(*function)(void *);
-    void *args;
-    void *ret_val;
+    void *(*function)(void *); // pointer to the routine
+    void *args;                // pointer to arguments of the routine
+    void *ret_val;             // pointer to the return value of the routine
 
-    int state;
-    int joined_on;
+    int state;     //state of the thread
+    int joined_on; //threadId on which this thread is joined on
 } cthread;
 
-// queue structure for thread pool
-typedef struct thread_queue
-{
-    cthread *head;
-    cthread *tail;
-    int value;
-} thread_queue;
-
-// states of any thread
+// states of a thread can be in
 typedef enum state
 {
     ACTIVE,
@@ -33,20 +28,24 @@ typedef enum state
     INVALID
 } state;
 
-// structure for scheduler
-int thread_scheduler();
+// function to initialise the threading library
+// pre = 1 for pre-emptive scheduling,
+// pre = 0 for non pre-emptive scheduling
+void cthread_init(int pre);
 
-void cthread_init(int);
-
+// function to create a thread instance
 int cthread_create(void *(*func)(void *), void *args);
 
+// function to yield the running thread to the kernel thread
 int cthread_yield(void);
 
+// function to wait till the thread tid finishes executing
 void cthread_join(int tid);
 
+// function to exit the thread safely
 void cthread_exit(void *ret_val);
 
-// defs for synchronisation
+// definitions for synchronisation
 
 typedef struct cthread_spinlock
 {
@@ -59,4 +58,5 @@ int cthread_spinlock_lock(cthread_spinlock *sl);
 
 int cthread_spinlock_unlock(cthread_spinlock *sl);
 
+// utility function to print all the threads
 void print_queue();

@@ -1,6 +1,5 @@
-/**
- * Simple producer-consumer program that tests the threads package.
- */
+
+// Simple producer-consumer program that tests the threads package.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,7 +78,6 @@ int main(void)
 
     // Join threads
     cthread_join(producer1);
-    // cthread_join(consumer1);
-    // cthread_join(consumer2);
+
     return 0;
 }

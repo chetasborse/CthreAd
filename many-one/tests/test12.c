@@ -1,7 +1,3 @@
-//
-// Created by Wayne on 24/1/13.
-//
-
 #include <stdio.h>
 #include "../cthread.h"
 

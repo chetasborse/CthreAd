@@ -1,10 +1,12 @@
-#include<stdio.h>
-#include<unistd.h>
+#include <stdio.h>
+#include <unistd.h>
 #include "../cthread.h"
 
-void *loop(void *args) {
+void *loop(void *args)
+{
     int i = 4;
-    while(i > 0) {
+    while (i > 0)
+    {
         printf("From thread\n");
         sleep(1);
         i--;
@@ -12,7 +14,8 @@ void *loop(void *args) {
     return NULL;
 }
 
-int main() {
+int main()
+{
     cthread_init();
     cthread c1;
     int pid1 = cthread_create(&c1, loop, NULL);

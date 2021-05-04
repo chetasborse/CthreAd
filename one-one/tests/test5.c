@@ -1,8 +1,9 @@
-#include<stdio.h>
-#include<unistd.h>
+#include <stdio.h>
+#include <unistd.h>
 #include "../cthread.h"
 
-void *func(void *args) {
+void *func(void *args)
+{
     cthread *c1 = cthread_get_self();
     int tid = c1->tid;
     printf("From thread: Tid => %d\n", tid);
@@ -10,7 +11,8 @@ void *func(void *args) {
     return NULL;
 }
 
-int main() {
+int main()
+{
     cthread_init();
     cthread c1;
     int pid1 = cthread_create(&c1, func, NULL);
