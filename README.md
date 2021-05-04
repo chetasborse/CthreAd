@@ -51,6 +51,7 @@
     <li><a href="#testing">Testing</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#acknowledgements">Acknowledgements</a></li>
+    <li><a href="#authors">Authors</a></li>
   </ol>
 </details>
 
@@ -139,4 +140,9 @@ This library is not a production level multi-threading library yet. Please use c
 * [TutorialsPoint](https://www.tutorialspoint.com/multi-threading-models#:~:text=Multithreading%20allows%20the%20execution%20of,of%20the%20CPU%20by%20multitasking.)
 * [GeeksForGeeks](https://www.geeksforgeeks.org/)
 
+
+## Authors
+
+- [@chetasborse](https://github.com/chetasborse)
+- [@andipro123](https://github.com/andipro123)
 
